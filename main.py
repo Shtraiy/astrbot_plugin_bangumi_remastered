@@ -1,7 +1,8 @@
 import copy
+import json
 import os
 import re
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
@@ -20,7 +21,8 @@ from astrbot.core.utils.session_waiter import (
 
 from .src.api import BangumiService
 from .src.api.bgmlist import fetch_onair_data
-from .src.app import SearchService, SubscriptionService
+from .src.app import BangumiToolService, SearchService, SubscriptionService
+from .src.bangumi_types import JsonObject
 from .src.config import ConfigManager
 from .src.db import BangumiRepository
 from .src.domain import (
@@ -77,6 +79,7 @@ class BangumiPlugin(Star):  # type: ignore[misc]
         self.session: aiohttp.ClientSession | None = None
         self.storage: BangumiRepository | None = None
         self.service: BangumiService | None = None
+        self.llm_tool_service: BangumiToolService | None = None
         self.subscription_service: SubscriptionService | None = None
         self.search_service: SearchService | None = None
         self.response_renderer: ResponseRenderer | None = None
@@ -123,6 +126,15 @@ class BangumiPlugin(Star):  # type: ignore[misc]
             proxy_url=proxy_url,
         )
         if self.service:
+            configured_max_results = self.config_manager.get_max_fuzzy_results()
+            try:
+                max_tool_results = min(max(1, int(configured_max_results)), 5)
+            except (TypeError, ValueError):
+                max_tool_results = 5
+            self.llm_tool_service = BangumiToolService(
+                service=self.service,
+                max_results=max_tool_results,
+            )
             # 搜索服务
             self.search_service = SearchService(
                 service=self.service,
@@ -412,6 +424,77 @@ class BangumiPlugin(Star):  # type: ignore[misc]
             subject_tags=[CommonTag.MANGA.value],
         ):
             yield result
+
+    async def _execute_llm_tool(
+        self,
+        tool_name: str,
+        operation: Callable[[], Awaitable[JsonObject]],
+    ) -> JsonObject:
+        if self.llm_tool_service is None:
+            return {"success": False, "error": "Bangumi Tool service unavailable"}
+        try:
+            return await operation()
+        except Exception as error:
+            logger.error(
+                f"Bangumi LLM Tool {tool_name} failed: {type(error).__name__}"
+            )
+            return {"success": False, "error": "Bangumi API request failed"}
+
+    @filter.llm_tool(name="bgm_search")  # type: ignore[untyped-decorator]
+    async def bgm_search(
+        self, event: AstrMessageEvent, keyword: str
+    ) -> AsyncGenerator[object, None]:
+        """Search Bangumi subjects and return structured results for the agent.
+
+        Args:
+            keyword(string): Subject title or keyword to search for.
+        """
+        service = self.llm_tool_service
+        result = await self._execute_llm_tool(
+            "bgm_search",
+            lambda: service.search(keyword) if service else self._missing_tool_result(),
+        )
+        yield event.plain_result(json.dumps(result, ensure_ascii=False))
+
+    @filter.llm_tool(name="bgm_subject")  # type: ignore[untyped-decorator]
+    async def bgm_subject(
+        self, event: AstrMessageEvent, subject_id: int
+    ) -> AsyncGenerator[object, None]:
+        """Get selected details for one Bangumi subject.
+
+        Args:
+            subject_id(number): Bangumi subject ID.
+        """
+        service = self.llm_tool_service
+        result = await self._execute_llm_tool(
+            "bgm_subject",
+            lambda: service.subject(subject_id)
+            if service
+            else self._missing_tool_result(),
+        )
+        yield event.plain_result(json.dumps(result, ensure_ascii=False))
+
+    @filter.llm_tool(name="bgm_calendar")  # type: ignore[untyped-decorator]
+    async def bgm_calendar(
+        self, event: AstrMessageEvent, weekday: int | None = None
+    ) -> AsyncGenerator[object, None]:
+        """Get Bangumi calendar items for a weekday.
+
+        Args:
+            weekday(number): ISO weekday from 1 to 7; omit it for today.
+        """
+        service = self.llm_tool_service
+        result = await self._execute_llm_tool(
+            "bgm_calendar",
+            lambda: service.calendar(weekday)
+            if service
+            else self._missing_tool_result(),
+        )
+        yield event.plain_result(json.dumps(result, ensure_ascii=False))
+
+    @staticmethod
+    async def _missing_tool_result() -> JsonObject:
+        return {"success": False, "error": "Bangumi Tool service unavailable"}
 
     @filter.command("calendar")  # type: ignore[untyped-decorator]
     async def calendar(self, event: AstrMessageEvent) -> AsyncGenerator[object, None]:

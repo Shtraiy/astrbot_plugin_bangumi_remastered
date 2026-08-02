@@ -1,6 +1,6 @@
 name: astrbot_plugin_bangumi_enhance
 display_name: Bangumi 魔改版
-desc: AstrBot Bangumi 非官方二次修改版，基于 Amatsutsumi 原项目开发，由 united_pooh 维护，不代表原项目官方；支持番剧/漫画图文搜索、每日放送时刻表查看及集数更新自动提醒
+desc: AstrBot Bangumi 非官方二次修改版，基于 Amatsutsumi 原项目开发，由 united_pooh 维护；支持番剧/漫画搜索、图文详情、放送日历、追番订阅、集数提醒及三个结构化 LLM Tool
 version: v1.5.6
 author: united_pooh（上游作者/项目：Amatsutsumi）
 license: Apache-2.0

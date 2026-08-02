@@ -1,6 +1,6 @@
 <div align="center">
 
-# Bangumi 搜索插件使用指南
+# Bangumi 魔改版
 [![version](https://img.shields.io/badge/version-v1.5.6-blue.svg)](https://github.com/united-pooh/astrbot_plugin_bangumi)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE-2.0)
 [![AstrBot](https://img.shields.io/badge/AstrBot-%3E%3D4.26.2-orange.svg)](https://github.com/Soulter/AstrBot)
@@ -9,7 +9,7 @@
 **和群友一起追番**
 </div>
 
-> **astrbot-plugin-bangumi** 是一个基于 AstrBot 框架的 Bangumi (番组计划) 信息查询与追番插件它通过对接 Bangumi API,为机器人用户提供精美的图文条目详情、实时放送时刻表,并具备自动化的订阅更新监控系统无论是想快速查询评分,还是在群内实时接收番剧更新通知,它都能为您提供优雅的交互体验
+> **Bangumi 魔改版** 是一个基于 AstrBot 框架的 Bangumi 非官方二次修改版，基于 [Amatsutsumi/astrbot_plugin_bangumi](https://github.com/Amatsutsumi/astrbot_plugin_bangumi) 开发，由 `united_pooh` 维护。项目提供番剧与漫画搜索、图文条目详情、放送日历、追番订阅和集数更新提醒，并新增 `bgm_search`、`bgm_subject`、`bgm_calendar` 三个结构化 LLM Tool，方便 AstrBot Agent 查询 Bangumi 信息。
 
 
 

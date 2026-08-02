@@ -1,4 +1,5 @@
 import importlib
+import json
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -300,6 +301,79 @@ async def test_today_dispatches_to_search_service() -> None:
 
     assert results == ["today"]
     plugin.search_service.handle_today.assert_called_once_with(event)
+
+
+@pytest.mark.asyncio
+async def test_bgm_search_is_a_structured_llm_tool_without_sending() -> None:
+    plugin = BangumiPlugin.__new__(BangumiPlugin)
+    plugin.llm_tool_service = MagicMock()
+    plugin.llm_tool_service.search = AsyncMock(
+        return_value={"success": True, "results": [{"id": 1}]}
+    )
+    event = _event()
+    event.send = AsyncMock()
+
+    results = [
+        result async for result in BangumiPlugin.bgm_search(plugin, event, "key")
+    ]
+
+    assert json.loads(results[0]) == {"success": True, "results": [{"id": 1}]}
+    plugin.llm_tool_service.search.assert_awaited_once_with("key")
+    event.send.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_bgm_subject_and_calendar_are_structured_llm_tools() -> None:
+    plugin = BangumiPlugin.__new__(BangumiPlugin)
+    plugin.llm_tool_service = MagicMock()
+    plugin.llm_tool_service.subject = AsyncMock(
+        return_value={"success": True, "subject": {"id": 10}}
+    )
+    plugin.llm_tool_service.calendar = AsyncMock(
+        return_value={"success": True, "weekday_id": 2, "items": []}
+    )
+    event = _event()
+    event.send = AsyncMock()
+
+    subject_results = [
+        result
+        async for result in BangumiPlugin.bgm_subject(plugin, event, 10)
+    ]
+    calendar_results = [
+        result
+        async for result in BangumiPlugin.bgm_calendar(plugin, event, 2)
+    ]
+
+    assert json.loads(subject_results[0]) == {
+        "success": True,
+        "subject": {"id": 10},
+    }
+    assert json.loads(calendar_results[0]) == {
+        "success": True,
+        "weekday_id": 2,
+        "items": [],
+    }
+    plugin.llm_tool_service.subject.assert_awaited_once_with(10)
+    plugin.llm_tool_service.calendar.assert_awaited_once_with(2)
+    event.send.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_llm_tool_returns_error_when_service_is_unavailable() -> None:
+    plugin = BangumiPlugin.__new__(BangumiPlugin)
+    plugin.llm_tool_service = None
+    event = _event()
+    event.send = AsyncMock()
+
+    results = [
+        result async for result in BangumiPlugin.bgm_search(plugin, event, "key")
+    ]
+
+    assert json.loads(results[0]) == {
+        "success": False,
+        "error": "Bangumi Tool service unavailable",
+    }
+    event.send.assert_not_called()
 
 
 @pytest.mark.asyncio
