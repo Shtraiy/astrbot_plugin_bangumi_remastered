@@ -13,8 +13,11 @@
 
 
 
-> [!NOTE]  
-> 本项目在 [astrbot_plugin_bangumi](https://github.com/Amatsutsumi/astrbot_plugin_bangumi) 的基础上进行二次开发
+## 项目来源与版权说明
+
+本项目是 `astrbot_plugin_bangumi` 的非官方二次修改版，基于 [Amatsutsumi/astrbot_plugin_bangumi](https://github.com/Amatsutsumi/astrbot_plugin_bangumi) 开发，由 `united_pooh` 维护。
+
+本项目不代表原项目官方，也不与原作者构成官方关联。除本项目新增或修改部分外，原项目的版权、署名及许可证权益归原作者/权利人所有。分发和使用时请保留原有署名与 [LICENSE-2.0](LICENSE-2.0) 文件。
 
 ## 📌 核心命令
 

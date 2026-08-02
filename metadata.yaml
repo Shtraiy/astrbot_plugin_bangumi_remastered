@@ -1,10 +1,10 @@
 name: astrbot_plugin_bangumi_enhance
-display_name: Bangumi 增强版
-desc: AstrBot Bangumi 增强版:为 AstrBot 打造的一站式 Bangumi 追番助手支持番剧/漫画图文搜索、每日放送时刻表查看及集数更新自动提醒
+display_name: Bangumi 魔改版
+desc: AstrBot Bangumi 非官方二次修改版，基于 Amatsutsumi 原项目开发，由 united_pooh 维护，不代表原项目官方；支持番剧/漫画图文搜索、每日放送时刻表查看及集数更新自动提醒
 version: v1.5.6
-author: united_pooh
+author: united_pooh（上游作者/项目：Amatsutsumi）
 license: Apache-2.0
-repo: https://github.com/united-pooh/astrbot_plugin_bangumi
+repo: https://github.com/Amatsutsumi/astrbot_plugin_bangumi
 astrbot_version: ">=4.26.2,<5"
 tags:
   - bangumi
