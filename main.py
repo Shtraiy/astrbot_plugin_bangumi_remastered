@@ -3,6 +3,7 @@ import json
 import os
 import re
 from collections.abc import AsyncGenerator, Awaitable, Callable
+from typing import cast
 from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
@@ -32,6 +33,7 @@ from .src.domain import (
     EpisodeCardVariant,
     SubjectType,
 )
+from .src.domain.contracts import SearchSubjectItem
 from .src.render import ResponseRenderer
 from .src.render.response_renderer import should_render_text_as_image
 from .src.utils import EnvManager, SchedulerManager
@@ -440,10 +442,37 @@ class BangumiPlugin(Star):  # type: ignore[misc]
             )
             return {"success": False, "error": "Bangumi API request failed"}
 
+    async def _send_llm_subject_card(
+        self, event: AstrMessageEvent, result: JsonObject
+    ) -> bool:
+        if not self.search_service or result.get("success") is not True:
+            return False
+
+        raw_results = result.get("results")
+        if not isinstance(raw_results, list):
+            return False
+        subjects = [item for item in raw_results if isinstance(item, dict)]
+        if not subjects:
+            return False
+
+        try:
+            cards = await self.search_service.render_subject_cards(
+                cast(list[SearchSubjectItem], subjects[:1]), top_k=1
+            )
+            if not cards:
+                return False
+            await event.send(MessageChain(chain=cards, type="tool_direct_result"))
+            return True
+        except Exception as error:
+            logger.error(
+                f"Bangumi LLM Tool subject card failed: {type(error).__name__}"
+            )
+            return False
+
     @filter.llm_tool(name="bgm_search")  # type: ignore[untyped-decorator]
     async def bgm_search(
         self, event: AstrMessageEvent, keyword: str
-    ) -> AsyncGenerator[object, None]:
+    ) -> str:
         """Search Bangumi subjects and return structured results for the agent.
 
         Args:
@@ -454,12 +483,14 @@ class BangumiPlugin(Star):  # type: ignore[misc]
             "bgm_search",
             lambda: service.search(keyword) if service else self._missing_tool_result(),
         )
-        yield event.plain_result(json.dumps(result, ensure_ascii=False))
+        if result.get("success") is True:
+            result["card_sent"] = await self._send_llm_subject_card(event, result)
+        return json.dumps(result, ensure_ascii=False)
 
     @filter.llm_tool(name="bgm_subject")  # type: ignore[untyped-decorator]
     async def bgm_subject(
         self, event: AstrMessageEvent, subject_id: int
-    ) -> AsyncGenerator[object, None]:
+    ) -> str:
         """Get selected details for one Bangumi subject.
 
         Args:
@@ -472,12 +503,12 @@ class BangumiPlugin(Star):  # type: ignore[misc]
             if service
             else self._missing_tool_result(),
         )
-        yield event.plain_result(json.dumps(result, ensure_ascii=False))
+        return json.dumps(result, ensure_ascii=False)
 
     @filter.llm_tool(name="bgm_calendar")  # type: ignore[untyped-decorator]
     async def bgm_calendar(
         self, event: AstrMessageEvent, weekday: int | None = None
-    ) -> AsyncGenerator[object, None]:
+    ) -> str:
         """Get Bangumi calendar items for a weekday.
 
         Args:
@@ -490,7 +521,7 @@ class BangumiPlugin(Star):  # type: ignore[misc]
             if service
             else self._missing_tool_result(),
         )
-        yield event.plain_result(json.dumps(result, ensure_ascii=False))
+        return json.dumps(result, ensure_ascii=False)
 
     @staticmethod
     async def _missing_tool_result() -> JsonObject:

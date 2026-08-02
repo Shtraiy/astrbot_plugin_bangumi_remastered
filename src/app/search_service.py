@@ -207,6 +207,12 @@ class SearchService:
 
         return [Comp.Image.fromBase64(b64) for b64 in base64_list]
 
+    async def render_subject_cards(
+        self, subjects: list[SearchSubjectItem], top_k: int = 1
+    ) -> list[Comp.Image]:
+        """Render subject cards for callers that already have search results."""
+        return await self._prepare_subject_images_base64(subjects, top_k)
+
     async def _translate_subject_summary_if_enabled(
         self, subject_data: SubjectDetailsResponse
     ) -> SubjectDetailsResponse:
